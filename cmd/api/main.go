@@ -1,6 +1,9 @@
 package main
 
 import (
+	"flag"
+	"fmt"
+
 	"github.com/ZBroskey/Fetch-receipt-processor-challenge/api/resource/health"
 	"github.com/ZBroskey/Fetch-receipt-processor-challenge/api/resource/receipt"
 	"github.com/labstack/echo/v4"
@@ -22,6 +25,14 @@ func init() {
 func main() {
 	log.Info().Msg("setup started")
 
+	var port int
+	flag.IntVar(&port, "port", 8081, "port to run the server on")
+	if port < 1 || port > 65535 {
+		log.Fatal().Msg("invalid port: port must be between 1 and 65535")
+	}
+	flag.Parse()
+
+
 	e := echo.New()
 
 	healthHandler := health.NewHandler()
@@ -36,5 +47,6 @@ func main() {
 	rpApi.GET("/:id/points", receiptHandler.GetPoints)
 	rpApi.POST("/process", receiptHandler.ProcessReceipt)
 
-	e.Logger.Fatal(e.Start(":8081"))
+	log.Info().Int("Server running on port ", port).Msg("setup complete")
+	e.Logger.Fatal(e.Start(fmt.Sprint(":", port)))
 }
