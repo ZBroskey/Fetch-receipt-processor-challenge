@@ -30,7 +30,7 @@ func getReceiptPoints(receipt *Receipt) int {
 		points += 1
 	}
 
-	// receipt.Total: Points for Round Number
+	// receipt.Total: Points for Round Dollar Amount
 	total, err := strconv.ParseFloat(receipt.Total, 64)
 	
 	if err != nil {
@@ -47,11 +47,11 @@ func getReceiptPoints(receipt *Receipt) int {
 	}
 	
 	// receipt.Items: Points for Even Number of Items
-	points += len(receipt.Items) / 2
+	points += (len(receipt.Items) / 2) * 5
 
 	// receipt.Items: Points for Trimmed Description
 	for _, item := range receipt.Items {
-		if len(strings.TrimSpace(item.ShortDescription)) / 3 > 0 {
+		if len(strings.TrimSpace(item.ShortDescription)) % 3 == 0 {
 			price, err := strconv.ParseFloat(item.Price, 64)
 			if err != nil {
 				continue
@@ -61,7 +61,7 @@ func getReceiptPoints(receipt *Receipt) int {
 	}
 
 	// receipt.PurchasedDate: Points for Odd Date
-	date, err := strconv.Atoi(receipt.PurchasedDate[len(receipt.PurchasedDate) - 2:])
+	date, err := strconv.Atoi(receipt.PurchaseDate[len(receipt.PurchaseDate) - 2:])
 	if err != nil {
 		return 0
 	}
@@ -70,7 +70,7 @@ func getReceiptPoints(receipt *Receipt) int {
 	}
 
 	// receipt.PurchasedTime: Points for Purchase Between 2pm and 4pm
-	time, err := strconv.ParseFloat(strings.Replace(receipt.PurchasedTime, ":", ".", 1), 64)
+	time, err := strconv.ParseFloat(strings.Replace(receipt.PurchaseTime, ":", ".", 1), 64)
 	if err != nil {
 		return 0
 	}
@@ -82,9 +82,11 @@ func getReceiptPoints(receipt *Receipt) int {
 }
 
 // @Summary					Get points
-// @Description			Get the points for an existing receipt
+// @Description			Get points for an existing receipt
+// @Tags						receipts
+// @Accept					json
 // @Produce					json
-// @Param						:id path string
+// @Param 					:id path string
 // @Success 				200
 // @Failure 				400
 // @Failure 				404
@@ -107,19 +109,21 @@ func (h *Handler) GetPoints(c echo.Context) error {
 	// Point Calculation
 	points := getReceiptPoints(receipt)
 
+	h.logger.Info().Int("points", points).Msg("points calculated")
+
 	return c.JSON(http.StatusOK, points)
 }
 
 // @Summary					Process receipt
-// @Description			Process a receipt and saves in temporary storage
-// @Accept					json
+// @Description			Process a receipt and return a receipt ID
 // @Produce					json
-// @Param						receipt body Receipt
+// @Param 					receipt body Receipt
 // @Success 				201
 // @Failure 				400
+// @Failure 				500
 // @Router 					/api/v1/receipts/process [post]
 func (h *Handler) ProcessReceipt(c echo.Context) error {
-	h.logger.Info().Msg("Process receipt")
+	h.logger.Info().Msg("process receipt")
 
 	var receipt Receipt
 	if err := c.Bind(&receipt); err != nil {
@@ -135,6 +139,8 @@ func (h *Handler) ProcessReceipt(c echo.Context) error {
 	if err := Save(c.Request().Context(), receiptId, receipt); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to save receipt")
 	}
+
+	h.logger.Info().Str("receiptId", receiptId).Msg("receipt processed")
 
 	return c.JSON(http.StatusCreated, receiptId)
 }

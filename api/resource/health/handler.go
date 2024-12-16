@@ -18,14 +18,12 @@ func NewHandler() *Handler {
 	}
 }
 
-// @Summary Health Check
-// @Description Check the health of the server
-// @Produce json
-// @Success 200
-// @Router /health [get]
-
+// @Summary					Health Check
+// @Produce					json
+// @Success 				200
+// @Router 					/health [get]
 func (h *Handler) HealthCheck(c echo.Context) error {
 	h.logger.Info().Msg("health check")
 
-	return c.NoContent(http.StatusOK)
+	return c.String(http.StatusOK, "OK")
 }

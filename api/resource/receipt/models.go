@@ -7,8 +7,8 @@ import (
 
 type Receipt struct {
 	Retailer string	`json:"retailer"`
-	PurchasedDate string	`json:"purchasedDate"`
-	PurchasedTime string	`json:"purchasedTime"`
+	PurchaseDate string	`json:"purchaseDate"`
+	PurchaseTime string	`json:"purchaseTime"`
 	Items []Item	`json:"items"`
 	Total string	`json:"total"`
 }
@@ -24,24 +24,28 @@ type Item struct {
 // - PurchasedTime is required
 // - Items are required
 // - Total is required
-func validateRequired(receipt Receipt) (bool, error) {
-	var err error = nil
-	switch {
-	case receipt.Retailer == "":
-		err = ErrRetailerRequired
-	case receipt.PurchasedDate == "":
-		err = ErrPurchasedDateRequired
-	case receipt.PurchasedTime == "":
-		err = ErrPurchasedTimeRequired
-	case len(receipt.Items) == 0:
-		err = ErrItemsRequired
-	case receipt.Total == "":
-		err = ErrTotalRequired
-	default:
-		return true, nil
+func validateRequired(receipt Receipt) (bool, error) {	
+	if receipt.Retailer == "" {
+		return false, ErrRetailerRequired
 	}
 
-	return false, err
+	if receipt.PurchaseDate == "" {
+		return false, ErrPurchasedDateRequired
+	}
+
+	if receipt.PurchaseTime == "" {
+		return false, ErrPurchasedTimeRequired
+	}
+
+	if len(receipt.Items) == 0 {
+		return false, ErrItemsRequired
+	}
+
+	if receipt.Total == "" {
+		return false, ErrTotalRequired
+	}
+
+	return true, nil
 }
 
 // ValidateReceipt validates a receipt
@@ -50,7 +54,8 @@ func validateRequired(receipt Receipt) (bool, error) {
 // - All Prices must be in the format DDD.DD
 // - Total must be the sum of all item prices
 func ValidateReceipt(receipt Receipt) (bool, error) {
-	if valid, err := validateRequired(receipt); !valid {
+	valid, err := validateRequired(receipt) 
+	if !valid {
 		return false, err
 	}
 	
@@ -58,12 +63,12 @@ func ValidateReceipt(receipt Receipt) (bool, error) {
 	timePattern := `^\d{2}:\d{2}$`
 	pricePattern := `^\d+\.\d{2}$`
 
-	matched, _ := regexp.MatchString(datePattern, receipt.PurchasedDate)
+	matched, _ := regexp.MatchString(datePattern, receipt.PurchaseDate)
 	if !matched {
 		return false, ErrInvalidPurchasedDate
 	}
 
-	matched, _ = regexp.MatchString(timePattern, receipt.PurchasedTime)
+	matched, _ = regexp.MatchString(timePattern, receipt.PurchaseTime)
 	if !matched {
 		return false, ErrInvalidPurchasedTime
 	}
@@ -87,7 +92,7 @@ func ValidateReceipt(receipt Receipt) (bool, error) {
 
 	receiptTotal, _ := strconv.ParseFloat(receipt.Total, 64)
 
-	if total != receiptTotal {
+	if int(total*100) != int(receiptTotal*100) {
 		return false, ErrTotalDoesNotCompute
 	}
 
