@@ -3,6 +3,7 @@ package receipt
 import (
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -25,10 +26,12 @@ func getReceiptPoints(receipt *Receipt) int {
 	points := 0
 
 	// receipt.Retailer: Points for Alphanumeric Characters
-	name := strings.ReplaceAll(receipt.Retailer, " ", "")
-	for range name {
-		points += 1
+	for _, char := range receipt.Retailer {
+		if regexp.MustCompile("[a-zA-Z0-9]").MatchString(string(char)) {
+			points += 1
+		}
 	}
+
 
 	// receipt.Total: Points for Round Dollar Amount
 	total, err := strconv.ParseFloat(receipt.Total, 64)
@@ -111,7 +114,7 @@ func (h *Handler) GetPoints(c echo.Context) error {
 
 	h.logger.Info().Int("points", points).Msg("points calculated")
 
-	return c.JSON(http.StatusOK, points)
+	return c.JSON(http.StatusOK, map[string]int{"points": points})
 }
 
 // @Summary					Process receipt
@@ -142,5 +145,5 @@ func (h *Handler) ProcessReceipt(c echo.Context) error {
 
 	h.logger.Info().Str("receiptId", receiptId).Msg("receipt processed")
 
-	return c.JSON(http.StatusCreated, receiptId)
+	return c.JSON(http.StatusCreated, map[string]string{"id": receiptId})
 }
